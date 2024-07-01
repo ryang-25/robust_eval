@@ -1,0 +1,14 @@
+__pycache__/
+
+# downloaded models
+models/
+
+# weird vscode thing
+.vscode/
+
+# accidents
+*.tar
+
+EVAL_RESULTS
+STATS
+TRAIN_RESULTS

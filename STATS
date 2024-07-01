@@ -1,0 +1,16 @@
+
+Best accuracy: 0.9169 -> CIFAR-10-AugMix.pt after 90 epochs
+
+Clean accuracy 0.88388671875 -> brightness
+Average loss: 0.0013734614878892898
+
+Best accuracy: 0.9228 -> CIFAR-10-None.pt after 90 epochs
+Clean accuracy: 0.86708984375
+Average loss: 0.0025514107048511506
+
+python3 .\train.py --epochs 200 --dataset CIFAR-10 --method=AugMix --checkpoint-path=.\models\weights\augmix-checkpoint.pt --batch-size 128
+python .\evaluate.py --weights=".\models\weights\CIFAR-10-None.pt" --attack="PGD" --batch-size=256 --evaluation="AdvAccuracy" --dataset=CIFAR-10
+9281 -> AugMix after 200 epochs on preactresnet18
+
+0.0 PGD accuracy (expected)
+mce_c:  0.7000441667560874
