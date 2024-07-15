@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from defenses.clean import Clean
-from utils import DDP
 
 from torchvision.transforms import v2
 
@@ -35,11 +34,10 @@ class AugMix(Clean):
             v2.ToDtype(torch.float32, scale=True),
         ])
 
-        loss_ema = 0.
+        loss_ema = torch.zeros(1, device=self.device)
         for images, labels in train_loader:
             self.optimizer.zero_grad()
-            images = images.to(self.device)
-            labels = labels.to(self.device)
+            images, labels = images.to(self.device), labels.to(self.device)
             
             # JSD calculation here
             images_aug1, images_aug2 = transforms(images), transforms(images)
@@ -62,22 +60,22 @@ class AugMix(Clean):
 
             loss.backward()
             self.optimizer.step()
-            loss_ema = loss_ema * 0.9 + loss.item() * 0.1
+            loss_ema = loss_ema * 0.9 + loss * 0.1
         self.scheduler.step() # we choose to adjust per epoch
-        return loss_ema
+        return loss_ema.item()
     
     def generate(self, train_loader, test_loader, start_epoch, epochs):
         best_acc = 0.
         best_weights = None
         for epoch in range(start_epoch, epochs):
             begin_time = time.time()
-            if DDP:
+            if self.is_ddp:
                 train_loader.sampler.set_epoch(epoch)
             train_loss = self.train(train_loader)
-            if not DDP or self.device == 0:
+            if self.is_main:
                 test_loss, test_acc = self.test(test_loader)
                 if test_acc > best_acc:
-                    best_weights = self.model.module.state_dict() if DDP else self.model.state_dict()
+                    best_weights = self.state_dict()
                     best_acc = test_acc
                 self.checkpoint() # checkpoint
                 print(f"Epoch {epoch} took {time.time() - begin_time:.2f}s. training",

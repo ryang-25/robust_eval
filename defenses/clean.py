@@ -3,7 +3,6 @@
 # No defense, just training.
 
 from defenses.defense import Defense
-from utils import DDP
 
 from torch.utils.data import DataLoader
 
@@ -52,13 +51,13 @@ class Clean(Defense):
         best_weights = None
         for epoch in range(start_epoch, epochs):
             begin_time = time.time()
-            if DDP:
+            if self.is_ddp:
                 train_loader.sampler.set_epoch(epoch)
             train_loss = self.train(train_loader)
-            if not DDP or self.device == 0:
+            if self.is_main:
                 test_loss, test_acc = self.test(test_loader)
                 if test_acc > best_acc:
-                    best_weights = self.model.module.state_dict() if DDP else self.model.state_dict()
+                    best_weights = self.state_dict()
                     best_acc = test_acc
                 self.checkpoint() # checkpoint
                 print(f"Epoch {epoch} took {time.time() - begin_time:.2f}s. training",

@@ -56,33 +56,29 @@ def evaluate(attack: Attack, method: Evaluation, test_loader: DataLoader, device
         final_metric[k] /= len(test_loader)  # Average metrics across batch #
     return final_metric
 
-
 def main(args: Namespace):
     cuda_available = torch.cuda.is_available()
-    compile_available = False # not DDP and (not cuda_available or sys.platform.startswith("linux"))
-    device = torch.device("cuda" if cuda_available else "cpu")
-
-    torch.backends.cudnn.benchmark = args.no_benchmark
-    torch.set_float32_matmul_precision("high")
-
+    should_compile = args.compile and (sys.platform.startswith("linux") or not cuda_available)
+    device = torch.device(f"cuda:{args.id}" if cuda_available else "cpu")
+    if cuda_available:
+        torch.backends.cudnn.benchmark = args.no_benchmark
+        torch.set_float32_matmul_precision("high")
     model = create_model(args.model).to(device) # preemptive move to GPU
-    if compile_available:
+    if should_compile:
         model = torch.compile(model)
+        print("Model compile finished.")
 
     load = torch.load(args.weights, map_location=device)
-    if "model_state" in load: # if we're using a resume checkpoint
-        load = load["model_state"]
+    load = getattr(load, "model_state", load) # if we're using a resume checkpoint
     model.load_state_dict(load)
 
     model_aug = None
     if args.weights_aug is not None:
-        model_aug = create_model(args.model)
-        model_aug = model_aug.to(device)
-        if compile_available:
+        model_aug = create_model(args.model).to(device)
+        if should_compile:
             model_aug = torch.compile(model_aug)
         load = torch.load(args.weights_aug, map_location=device)
-        if "model_state" in load: # if we're using a resume checkpoint
-            load = load["model_state"]
+        load = getattr(load, "model_state", load)
         model_aug.load_state_dict(load)
 
     normal = normalize(args.dataset)
@@ -129,7 +125,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num-workers", type=int, default=4, help="Number of pre-fetching threads."
     )
-    parser.add_argument("--eval-iters", type=int)
     parser.add_argument("--no-benchmark", action="store_false", help="Disable cuDNN autotuner")
+    parser.add_argument("--compile", action="store_true")
+    parser.add_argument("--id", type=int, default=0)
     main(parser.parse_args())
 

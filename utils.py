@@ -19,8 +19,6 @@ WEIGHTS_DIR = "./models/weights/"
 TRAIN_RESULTS = "TRAIN_RESULTS"
 EVAL_RESULTS = "EVAL_RESULTS"
 
-DDP = False
-
 def setup(rank, world_size):
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "12355"

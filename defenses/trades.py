@@ -3,7 +3,6 @@
 # An implementation of TRADES.
 
 from defenses import Clean
-from utils import DDP
 
 import time
 import torch
@@ -55,12 +54,12 @@ class TRADES(Clean):
         test_acc = 0.
         for epoch in range(start_epoch, epochs):
             begin_time = time.time()
-            if DDP:
+            if self.is_ddp:
                 train_loader.sampler.set_epoch(epoch)
             train_loss = self.train(train_loader)
-            if not DDP or self.device == 0:
+            if self.is_main
                 test_loss, test_acc = self.test(test_loader)
                 self.checkpoint()
                 print(f"Epoch {epoch} took {time.time() - begin_time:3f}s. training "\
                         f"loss: {train_loss:>4f}, test loss: {test_loss:>4f}, test accuracy: {test_acc}")
-        return self.model.module.state_dict() if DDP else self.model.state_dict(), test_acc
+        return self.state_dict(), test_acc

@@ -5,7 +5,6 @@
 from attacks import PGD
 from defenses import Clean
 from evaluation import CleanAccuracy
-from utils import DDP
 
 import time
 import torch.nn.functional as F
@@ -44,13 +43,13 @@ class PgdAt(Clean):
         adv_acc = 0.
         for epoch in range(start_epoch, epochs):
             begin_time = time.time()
-            if DDP:
+            if self.is_ddp:
                 train_loader.sampler.set_epoch(epoch)
             adv_acc, train_loss = self.train(train_loader)
-            if not DDP or self.device == 0:
+            if self.is_main:
                 test_loss, test_acc = self.test(test_loader)
                 self.checkpoint()
                 print(f"Epoch {epoch} took {time.time()-begin_time:.2f}s. training "\
                     f"loss: {train_loss:>4f}, test loss: {test_loss:>4f}, adversarial accuracy: {adv_acc:>4f} "\
                     f"test accuracy: {test_acc:>4f}")
-        return self.model.module.state_dict() if DDP else self.model.state_dict(), adv_acc
+        return self.state_dict(), adv_acc

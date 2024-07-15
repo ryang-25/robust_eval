@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 
-from utils import DDP
-
 from torch import device
 from torch.nn import Module
 from torch.optim import SGD
@@ -23,6 +21,9 @@ class Defense(ABC):
         self.device = device
         self.checkpoint_path = checkpoint_path
         self.normalize = normalize
+        model = getattr(model, "_orig_mod", model)
+        self.is_ddp = hasattr(model, "model")
+        self.is_main = not sel.is_ddp or self.device.id == 0
         match dataset:
             case "CIFAR-10" | "CIFAR-100":
                 self.optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9,
