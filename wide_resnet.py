@@ -25,13 +25,13 @@ class WideBasicDropout(nn.Module):
         """
         BN-ReLU-conv with dropout
         """
-        out = F.relu_(self.bn1(x))
+        out = F.relu(self.bn1(x))
         # The paper uses the preactivated blocks but the implementation doesn't
         # use it for the shortcut even though PreAct-ResNet does. Try this and
         # see how it performs.
         shortcut = self.shortcut(out) if hasattr(self, "shortcut") else x
         out = self.conv1(out)
-        out = self.conv2(self.dropout(F.relu_(self.bn2(out))))
+        out = self.conv2(self.dropout(F.relu(self.bn2(out))))
         out += shortcut
         return out
 
@@ -59,7 +59,7 @@ class WideResNet(nn.Module):
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
-        out = F.relu_(self.bn1(out))
+        out = F.relu(self.bn1(out))
         out = F.avg_pool2d(out, kernel_size=8)
         out = out.view(-1, self.stages[3])
         return self.linear(out)

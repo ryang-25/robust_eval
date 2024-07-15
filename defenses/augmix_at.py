@@ -38,20 +38,18 @@ class AugMixAT(Clean):
         pgd.iters = 7
         pgd.step_size = 2/255
 
-        loss_ema = 0.
+        loss_ema = torch.zeros(1, device=self.device)
         for images, labels in train_loader:
             self.optimizer.zero_grad()
-            images = images.to(self.device)
-            labels = labels.to(self.device)
+            images, labels = images.to(self.device), labels.to(self.device)
             images = transforms(images)
             images_adv = pgd.generate(images, labels)
             images_adv = self.normalize(images_adv)
             output = self.model(images_adv)
-            # Calculate cross entropy on natural
             loss = F.cross_entropy(output, labels)
             loss.backward()
             self.optimizer.step()
-            loss_ema = loss_ema * 0.9 + loss.item() * 0.1
+            loss_ema = loss_ema * 0.9 + loss.detach() * 0.1
         self.scheduler.step() # we choose to adjust per epoch
         return loss_ema
     

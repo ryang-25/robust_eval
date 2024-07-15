@@ -13,10 +13,10 @@ import torch.nn.functional as F
 class Clean(Defense):
     def train(self, train_loader: DataLoader):
         self.model.train()
-        device_type = "cuda" #self.device.type
+        device_type = self.device.type
         scaler = torch.GradScaler(device_type)
 
-        loss_ema = 0.
+        loss_ema = torch.zeros(1, device=self.device)
         for images, labels in train_loader:
             self.optimizer.zero_grad()
             images, labels = images.to(self.device), labels.to(self.device)
@@ -28,23 +28,23 @@ class Clean(Defense):
             scaler.scale(loss).backward()
             scaler.step(self.optimizer)
             scaler.update()
-            loss_ema = loss_ema * 0.9 + loss.item() * 0.1
+            loss_ema = loss_ema * 0.9 + loss.detach() * 0.1
         self.scheduler.step()
-        return loss_ema
+        return loss_ema.item()
 
-    @torch.no_grad
+    @torch.inference
     def test(self, test_loader: DataLoader):
         self.model.eval()
-        loss = 0.
-        correct = 0
+        loss = torch.zeros(1, device=self.device)
+        correct = torch.zeros(1, device=self.device)
         for images, labels in test_loader:
             images, labels = images.to(self.device), labels.to(self.device)
             output = self.model(self.normalize(images))
-            loss += F.cross_entropy(output, labels).item()
+            loss += F.cross_entropy(output, labels)
             pred = output.argmax(1)
-            correct += (pred == labels).sum().item()
+            correct += (pred == labels).sum()
         total_len = len(test_loader.dataset)
-        return loss / total_len, correct / total_len
+        return loss.item() / total_len, correct.item() / total_len
 
     def generate(self, train_loader, test_loader, start_epoch, epochs):
         best_acc = 0.

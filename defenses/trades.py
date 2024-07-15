@@ -26,14 +26,14 @@ class TRADES(Clean):
             images_norm = self.normalize(images)
             images_adv = images.detach() + 0.001 * torch.randn_like(images) # leaf
             for _ in range(self.steps):
-                images_adv.detach_().requires_grad_()
+                images_adv = images_adv.detach().requires_grad_()
                 with torch.enable_grad():
                     output, output_adv = model(images_norm), model(self.normalize(images_adv))
                     loss_kl = F.kl_div(F.log_softmax(output_adv, dim=1),
                                     F.softmax(output, dim=1), reduction="sum")
                 loss_kl.backward()
-                images_adv: torch.Tensor = images_adv.detach() + self.step_size * images_adv.grad.detach().sign()
-                images_adv = images_adv.clamp_(images-self.epsilon, images+self.epsilon).clamp_(0., 1.)
+                images_adv: torch.Tensor = images_adv + self.step_size * images_adv.grad.sign()
+                images_adv = images_adv.clamp(images-self.epsilon, images+self.epsilon).clamp(0., 1.)
     
             model.train()
             self.optimizer.zero_grad()

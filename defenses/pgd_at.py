@@ -15,7 +15,8 @@ class PgdAt(Clean):
         Training for one epoch.
         """
         self.model.train()
-        loss_ema = total_acc = 0.
+        loss_ema = torch.zeros(1, device=self.device)
+        total_acc = 0.
         pgd = PGD(self.model, self.device, self.normalize)
         pgd.iters = 7
         pgd.step_size = 2/255
@@ -33,11 +34,11 @@ class PgdAt(Clean):
 
             loss.backward()
             self.optimizer.step()
-            loss_ema = loss_ema * 0.9 + loss.item() * 0.1
+            loss_ema = loss_ema * 0.9 + loss * 0.1
             total_acc += CleanAccuracy(self.model).evaluate(adv, labels).popitem()[1]
         self.scheduler.step()
         total_acc /= n_images
-        return total_acc, loss_ema
+        return total_acc, loss_ema.item()
 
     def generate(self, train_loader, test_loader, start_epoch, epochs):
         adv_acc = 0.

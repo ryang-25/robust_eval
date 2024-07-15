@@ -35,7 +35,7 @@ def create_evaluation(method: str, model, model_aug) -> Evaluation:
         sys.exit("Invalid evaluation!")
 
 
-@torch.no_grad
+@torch.inference
 def evaluate(attack: Attack, method: Evaluation, test_loader: DataLoader, device, normalize):
     final_metric = {}
     for images, targets in test_loader:

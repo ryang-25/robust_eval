@@ -53,14 +53,14 @@ class AugMix(Clean):
             p_nat, p_aug1, p_aug2 = output_all.softmax(1).split(images.size(0))
 
             # trick from https://github.com/google-research/augmix/blob/master/cifar.py#L232
-            m = ((p_nat + p_aug1 + p_aug2)/3.).clamp_(1e-7, 1).log_()
+            m = ((p_nat + p_aug1 + p_aug2)/3.).clamp(1e-7, 1).log()
             loss +=  12/3 * (F.kl_div(m, p_nat, reduction="batchmean") +
                 F.kl_div(m, p_aug1, reduction="batchmean") +
                 F.kl_div(m, p_aug2, reduction="batchmean"))
 
             loss.backward()
             self.optimizer.step()
-            loss_ema = loss_ema * 0.9 + loss * 0.1
+            loss_ema = loss_ema * 0.9 + loss.detach() * 0.1
         self.scheduler.step() # we choose to adjust per epoch
         return loss_ema.item()
     

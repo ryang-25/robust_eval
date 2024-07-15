@@ -23,15 +23,14 @@ class PGD(Attack):
         xs = (xs_nat + eta).clamp_(0., 1.)
 
         for _ in range(self.iters):
-            xs.detach_().requires_grad_()
+            xs = xs.detach().requires_grad_()
             xs.retain_grad()
             with torch.enable_grad():
                 output = self.model(self.normalize(xs)) # we need to calculate loss wrt normalized input
                 loss = F.cross_entropy(output, ys)
             loss.backward()
             
-            # in-place operations for better efficiency.
-            xs = xs.detach() + self.step_size * xs.grad.detach().sign()
-            xs.clamp_(xs_nat - self.epsilon, xs_nat + self.epsilon)
-            xs.clamp_(0., 1.)
+            xs = xs + self.step_size * xs.grad.sign()
+            xs = xs.clamp(xs_nat - self.epsilon, xs_nat + self.epsilon)
+            xs = xs.clamp(0., 1.)
         return xs
