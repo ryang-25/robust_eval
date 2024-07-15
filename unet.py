@@ -13,8 +13,8 @@ class DownConv(nn.Module):
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
 
     def forward(self, x):
-        out = F.relu_(self.conv1(x))
-        out = F.relu_(self.conv2(out))
+        out = F.relu(self.conv1(x))
+        out = F.relu(self.conv2(out))
         out = self.maxpool(out)
         return out
 
@@ -30,8 +30,8 @@ class UpConv(nn.Module):
     def forward(self, x):
         out = self.upconv(x)
         out = torch.cat((out, self.output), dim=1)
-        out = F.relu_(self.conv1(out))
-        out = F.relu_(self.conv2(out))
+        out = F.relu(self.conv1(out))
+        out = F.relu(self.conv2(out))
         return out
 
 class UNet(nn.Module):

@@ -3,14 +3,10 @@ from evaluation.evaluation import Evaluation
 class ACAC(Evaluation):
     def evaluate(self, nat_xs, nat_ys, adv_xs, adv_out):
         prob, pred = adv_out.softmax(1).max(1)
-        misclass = total_prob = 0
-        for i in range(len(pred)):
-            if pred[i] != nat_ys[i]:
-                misclass += 1
-                total_prob += prob[i]
+        cac = prob[pred != nat_ys]
         return {
-            "Average Confidence of Adversarial Class": total_prob / misclass,
-            "Percentage of misclassifications": misclass / len(pred),
+            "Average Confidence of Adversarial Class": cac.mean(),
+            "Percentage of misclassifications": len(cac) / len(pred),
         }
 
 

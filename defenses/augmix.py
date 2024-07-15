@@ -45,12 +45,12 @@ class AugMix(Clean):
             images_all = self.normalize(images_all)
 
             output_all = self.model(images_all)
-            nat_out = output_all.split(images.size(0))[0]
+            nat_out = output_all.split(len(images))[0]
 
             # Calculate cross entropy on natural
             loss = F.cross_entropy(nat_out, labels)
 
-            p_nat, p_aug1, p_aug2 = output_all.softmax(1).split(images.size(0))
+            p_nat, p_aug1, p_aug2 = output_all.softmax(1).split(len(images))
 
             # trick from https://github.com/google-research/augmix/blob/master/cifar.py#L232
             m = ((p_nat + p_aug1 + p_aug2)/3.).clamp(1e-7, 1).log()

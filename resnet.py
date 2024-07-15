@@ -34,10 +34,10 @@ class Block(nn.Module):
         )
 
     def forward(self, x):
-        out = F.relu_(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn1(self.conv1(x)))
         out = self.bn2(self.conv2(out))
         out += self.shortcut(x)
-        return F.relu_(out)
+        return F.relu(out)
 
 
 class Bottleneck(nn.Module):
@@ -62,11 +62,11 @@ class Bottleneck(nn.Module):
 
 
     def forward(self, x):
-        out = F.relu_(self.bn1(self.conv1(x)))
-        out = F.relu_(self.bn2(self.conv2(out)))
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn2(self.conv2(out)))
         out = self.bn3(self.conv3(out))
         out += self.shortcut(x)
-        return F.relu_(out)
+        return F.relu(out)
 
 class ResNetCIFAR(nn.Module):
     def __init__(self, block, ):

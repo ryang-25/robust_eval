@@ -7,15 +7,10 @@ class CCV(ComparativeEvaluation):
     def evaluate(self, nat_xs, nat_ys, *_):
         prob_nat, pred_nat = self.model(nat_xs).softmax(1).max(1)
         prob_aug, pred_aug = self.model_aug(nat_xs).softmax(1).max(1)
-        diff = correct = 0
-        for i in range(len(nat_ys)):
-            if nat_ys[i] == pred_nat[i] == pred_aug[i]:
-                correct += 1
-                diff += (prob_aug[i] - prob_nat[i]).abs_().item()
-        diff /= correct
+        diffs = (prob_aug - prob_nat).abs_()[nat_ys == pred_nat == pred_aug]
         return {
-            "Classification Confidence Variance": diff,
-            "Percentage of misclassifications": 1-correct/len(nat_ys)
+            "Classification Confidence Variance": diff.mean(),
+            "Percentage of misclassifications": 1-len(diffs)/len(nat_ys)
         }
 
 class COS(ComparativeEvaluation):
