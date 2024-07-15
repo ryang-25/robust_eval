@@ -69,7 +69,7 @@ def main(args: Namespace):
         print("Model compile finished.")
 
     load = torch.load(args.weights, map_location=device)
-    load = getattr(load, "model_state", load) # if we're using a resume checkpoint
+    load = load.get("model_state", load) # if we're using a resume checkpoint
     model.load_state_dict(load)
 
     model_aug = None
@@ -78,7 +78,7 @@ def main(args: Namespace):
         if should_compile:
             model_aug = torch.compile(model_aug)
         load = torch.load(args.weights_aug, map_location=device)
-        load = getattr(load, "model_state", load)
+        load = load.get("model_state", load) # if we're using a resume checkpoint
         model_aug.load_state_dict(load)
 
     normal = normalize(args.dataset)

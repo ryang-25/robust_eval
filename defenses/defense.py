@@ -23,7 +23,7 @@ class Defense(ABC):
         self.normalize = normalize
         model = getattr(model, "_orig_mod", model)
         self.is_ddp = hasattr(model, "model")
-        self.is_main = not sel.is_ddp or self.device.id == 0
+        self.is_main = not self.is_ddp or self.device.id == 0
         match dataset:
             case "CIFAR-10" | "CIFAR-100":
                 self.optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9,
