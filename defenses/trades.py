@@ -57,7 +57,7 @@ class TRADES(Clean):
             if self.is_ddp:
                 train_loader.sampler.set_epoch(epoch)
             train_loss = self.train(train_loader)
-            if self.is_main
+            if self.is_main:
                 test_loss, test_acc = self.test(test_loader)
                 self.checkpoint()
                 print(f"Epoch {epoch} took {time.time() - begin_time:3f}s. training "\

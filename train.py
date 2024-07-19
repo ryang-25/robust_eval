@@ -67,10 +67,10 @@ def main(device: torch.device, args: Namespace, world_size=1):
         model = DDP(model, device_ids=[device])
     # https://github.com/pytorch/pytorch/issues/125093
     # Only Linux supports GPU compile with Triton.
-    if args.compile and (sys.platform.startswith("linux") or not is_cuda):
+    if args.compile and sys.platform.startswith("linux"):
         model = torch.compile(model, mode="reduce-overhead")
-        print("Model compile finished.")
-    if not os.paths.exists(MODELS_DIR):
+        print("Model compile started.")
+    if not os.path.exists(MODELS_DIR):
         os.makedirs(MODELS_DIR)
     train_set = load_train_set(args.dataset)
     train_loader = DataLoader(train_set, batch_size=args.batch_size,
@@ -137,9 +137,14 @@ if __name__ == "__main__":
     if args.ddp:
         world_size = torch.cuda.device_count()
         assert world_size > 0
-        wrapper = lambda rank : main(torch.device("cuda", rank), args, world_size)
+        wrapper = lambda rank : main(torch.device("cuda", rank), args, world_size) # this could potentially be a problem?
         mp.spawn(wrapper, nprocs=world_size)
     else:
-        device = torch.device(f"cuda:{args.id}" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            device = torch.device("cuda", args.id)
+        elif torch.backends.mps.is_available():
+            device = torch.device("mps")
+        else:
+            device = torch.device("cpu")
         main(device, args)
 

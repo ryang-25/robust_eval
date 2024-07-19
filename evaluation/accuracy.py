@@ -8,7 +8,7 @@ class CleanAccuracy(Evaluation):
     Clean accuracy. The model's ability to successfully classify the test set.
     """
 
-    @torch.inference
+    @torch.inference_mode
     def evaluate(self, nat_xs, nat_ys, *_):
         self.model.eval()
         pred = self.model(nat_xs).argmax(1)

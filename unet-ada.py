@@ -1,6 +1,6 @@
-# unet.py
+# unet-ada.py
 #
-# Implementation of U-Net from https://arxiv.org/abs/1505.04597
+# Implementation of U-Net from https://arxiv.org/abs/1505.04597 with modifications from AdA
 
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,8 +8,8 @@ import torch.nn.functional as F
 class DownConv(nn.Module):
     def __init__(self, in_planes, planes):
         super().__init__()
-        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, bias=False)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, bias=False)
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3)
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
 
     def forward(self, x):
@@ -21,11 +21,11 @@ class DownConv(nn.Module):
 class UpConv(nn.Module):
     def __init__(self, in_planes, planes, cont):
         super().__init__()
-        self.upconv = nn.ConvTranspose2d(in_planes, planes, kernel_size=2, stride=2, bias=False)
+        self.upconv = nn.ConvTranspose2d(in_planes, planes, kernel_size=2, stride=2)
         self.crop = nn.ZeroPad2d(-)
         self.output = output
-        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3, bias=False)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, bias=False)
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=3)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3)
 
     def forward(self, x):
         out = self.upconv(x)
@@ -39,21 +39,24 @@ class UpConv(nn.Module):
 class UNet(nn.Module):
     def __init__(self, classes):
         super().__init__()
-        self.e1 = DownConv(3, 64)
-        self.e2 = DownConv(64, 128)
-        self.e3 = DownConv(128, 256)
-        self.e4 = DownConv(256, 512)
-        self.conv1 = nn.Conv2d(512, 1024, kernel_size=3, bias=False)
-        self.conv2 = nn.Conv2d(1024, 1024, kernel_size=3, bias=False)
-        self.d1 = UpConv(1024, 512, )
+        # The U-Net architecture we use has a two-layer encoder (with 16 and 32
+        # filters respectively) and a three-layer decoder (with 64, 32 and 16
+        # filters respectively).
+        self.e1 = DownConv(3, 16)
+        self.e2 = DownConv(16, 32)
+        self.conv1 = nn.Conv2d(32, 64, kernel_size=3, bias=False)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, bias=False)
+        self.d1 = UpConv(64, 32)
+        self.d2 = UpConv(32, 16)
+        self.d3= UpConv(16, 8)
+        self.out = nn.Conv2d(8, classes, kernel_size=1)
 
     def forward(self, x):
         out, c1 = self.e1(x)
         out, c2 = self.e2(out)
-        out, c3 = self.e3(out)
-        out, c4 = self.e4(out)
         out = self.conv1(out)
         out = self.conv2(out)
+
 
 
 

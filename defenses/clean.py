@@ -32,7 +32,7 @@ class Clean(Defense):
         self.scheduler.step()
         return loss_ema.item()
 
-    @torch.inference
+    @torch.inference_mode
     def test(self, test_loader: DataLoader):
         self.model.eval()
         loss = torch.zeros(1, device=self.device)

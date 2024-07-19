@@ -1,0 +1,587 @@
+\documentclass[a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}%\usepackage[latin1]{inputenc}
+\DeclareUnicodeCharacter{0301}{\'{e}}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{
+  setpagesize  = false,
+  colorlinks   = true,    % Colours links instead of ugly boxes
+  urlcolor     = black,    % Colour for external hyperlinks
+  % linkcolor    = black,   % Colour of internal links
+  % citecolor    = black    % Colour of citations
+}
+\urlstyle{same} 
+
+\usepackage{authblk}
+\usepackage{geometry}
+%\usepackage{setspace}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{gensymb}
+%\usepackage{verbatim} % env for block comment 
+%\usepackage{ragged2e} % para usar flusleft
+%\usepackage{minted}
+%usemintedstyle{tango}
+%\usepackage{amsfonts}
+%\usepackage{cancel}
+\usepackage{diagbox}
+
+\usepackage[
+    sorting=none,
+    style=trad-plain,
+    maxcitenames=2 % only cite two authors and then et al
+]{biblatex}
+\addbibresource{references.bib}
+
+\setcounter{page}{1} % página inicial do artigo
+%==========================================================================
+% Margens e tamanho da página
+%==========================================================================
+\setlength{\paperwidth}{19cm}\setlength{\paperheight}{29cm}
+\setlength{\textwidth}{16cm}\setlength{\textheight}{23cm}
+\setlength{\oddsidemargin}{1.5cm}
+\setlength{\headheight}{\baselineskip}
+\setlength{\topmargin}{3cm}
+%\setlength{\headsep}{2cm}\addtolength{\headsep}{-\headheight}
+\setlength{\footskip}{2cm}\addtolength{\footskip}{.5\baselineskip}
+\addtolength{\topmargin}{-1in}
+\addtolength{\oddsidemargin}{-1in}
+\setlength{\evensidemargin}{\oddsidemargin}
+%=========================================================================
+% Definições diversas
+%==========================================================================
+\setlength{\parindent}{1cm}
+\setlength{\parskip}{.5\baselineskip}
+
+%==========================================================================
+% Abstract
+%==========================================================================
+\renewenvironment{abstract}{
+    \begin{center}\begin{minipage}{14cm}{\textbf{\abstractname:}}
+}
+{
+    \end{minipage}
+    \end{center}
+}
+%==========================================================================
+% Keywords
+%==========================================================================
+\newenvironment{keywords}{
+    \def\abstractname{\emph{Keywords}}
+    \begin{abstract}
+}{\end{abstract}}
+%==========================================================================
+% Article
+%==========================================================================
+\title {Evaluating Corruption Defenses on Learning Adversarial Robustness}
+
+\author{Roland Yang
+\thanks{ryang25@governors} $^1$}
+\author{friend of duck
+\thanks{} $^1$}
+\affil{$^1$ duck school}
+\date{} % Not usual to use a date. Don't comment this line out.
+
+\usepackage{fancyhdr}
+\fancyhf{}
+
+%==========================================================================
+% Não editar o cabeçalho
+%==========================================================================
+%==========================================================================
+% Não editar o cabeçalho
+%==========================================================================
+\fancyhead[R]{\thepage}
+\pagestyle{fancy}
+
+
+% BEFORE PUBLICATION: hard-wrap all lines to 80 characters. Thanks.
+\begin{document}
+
+\maketitle
+\vspace{6pt}
+
+\begin{abstract}
+Within the last few years, deep learning models have seen increasing usage
+in a variety of computer vision domains and have attained high accuracy rates
+for a number of visual identification tasks. However, when faced with real data
+containing visible anomalies, their accuracy can be reduced significantly. In
+addition, adversarial examples, inputs with deliberate changes that induce
+misclassification, further hinder their performance. However, training methods
+used to minimize the effects of adversarial examples also negatively impact a
+model's robustness on clean data as well as common noise and distortions, which
+may be an undesired trade off. Adversarial robustness is a model’s ability to
+resist intentional deceptive inputs, while corruption robustness is its
+resilience to everyday noise and distortions. In this paper, we adapt a
+technique that improves the neural network's ability to generalize by training
+on augmented images of the dataset and evaluate its efficacy in the face of
+adversarial examples with several empirical metrics, comparing its performance
+with traditional adversarial training techniques.
+\end{abstract}
+
+
+% https://arxiv.org/pdf/1906.06032 - shows that adversarial training negativly affects standard accuracy 
+
+
+% Decide on keywords later, if we ever need them.
+% \begin{keywords}
+%     Corruption, Model Robustness, Adversarial Robustness, Adversarial Attacks
+% \end{keywords}
+
+\vspace{6pt}
+
+\section{Introduction}
+
+Deep neural networks (DNNs) are extensively used today for various image
+classification tasks and achieve high accuracy within their problem areas. To
+accomplish this, DNNs are trained on large amounts of data and learn to detect
+specific features of an input. To achieve accurate and reliable performance,
+especially in complex applications, the training dataset should approximate the
+scenarios the model is expected to encounter in the real world. If the training
+data differs from real-world scenarios, the model’s performance can degrade
+substantially, causing misclassification \cite{whang2022baddata}.
+Misclassifications can lead to critical errors in real-world applications, such
+as misidentifying medical images \cite{tang2020dnninmedicalfield}, traffic
+signs \cite{rani2024trafficsigns}, or security threats \cite{Hsiao2019security},
+which could be catastrophic. Ensuring that models can handle anomalies is
+crucial for their reliability in deployment. In practice, computer vision models
+can misclassify objects due to various factors, including
+\textit{adversarial examples} \cite{szegedy2014intriguing},
+\textit{visual corruptions} \cite{hendrycks2019benchmarking}, and 
+\textit{overfitting} \cite{rice2020overfitting}.
+
+An \textit{adversarial example} is an input into a machine learning model that
+is slightly altered to cause the model to misidentify the input. While there
+exist both \textit{targeted} and \textit{non-targeted} examples, our focus is
+on non-targeted examples, which aim to cause a model to misclassify an input to
+any other class rather than towards a specific target class. The
+perturbation—i.e., tiny modification to the image—should be imperceptible to
+humans but cause the neural network to confidently misclassify the input. 
+
+Over-training the model can also be problematic because of \textit{overfitting}. Overfitting occurs when a model learns to perform exceptionally well on the training data but fails to generalize to new, unseen data. This happens because the model mistakes the noise and random fluctuations in the training data for actual patterns, leading to an overly complex model that is highly sensitive to irrelevant variations. These irrelevant variations are minor differences that do not represent meaningful patterns and should have no effect on the model. In real-world scenarios, an overfitted model can often produce inaccurate predictions when it encounters new data. 
+
+
+\textit{Visual corruptions} refer to distortions that can significantly impact the performance and accuracy of the model. These distortions include blurriness, noise, geometric transformations, color shifts, and more. Corruptions of this nature can alter the image's appearance without fundamentally changing its content, making them a problem for DNNs rather than humans. Refer to examples in \autoref{fig_corruptions}. 
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.5\linewidth]{corruptions.jpg}
+    \advance\leftskip-3cm
+    \advance\rightskip-3cm
+    \caption{
+        Examples of visual corruptions applied to a German stop sign, originally sourced from \textcite{stallkamp2011tgtsrb} and augmented using the framework by \textcite{jockel2019safe}. These images display various augmentations, including blur, fog, darkness, and contrast, with the original image located furthest to the left.
+    }
+    \label{fig_corruptions}
+\end{figure}
+% source this later 
+
+
+% Potentially useful papers
+% "Overfitting in adversarially robust deep learning"
+
+
+% https://openaccess.thecvf.com/content/CVPR2022W/L3D-IVU/papers/Cugu_Attention_Consistency_on_Visual_Corruptions_for_Single-Source_Domain_Generalization_CVPRW_2022_paper.pdf cite this for visual distortions 
+
+
+While existing literature has thoroughly investigated adversarial attacks
+\cites{goodfellow2015explaining}{moosavidezfooli2016deepfool}{carlini2017evaluating}
+and associated defenses through training or distillation
+\cites{goodfellow2015explaining}{papernot2016distillation}{madry2018deeplearningmodelsresistant},
+there is considerably less insight into other methods to evaluate adversarial
+robustness \cite{guo2022comprehensive} and how traditional defenses compare
+under additional metrics beyond accuracy. To gain a clear perspective of a
+defense's effectiveness, it is often necessary to test with several attacks
+to determine the performance of the model within in the worse-case scenario,
+a nontrivial task
+\cite{carlini2019evaluating}.
+For that reason, many benchmarks on robustness focus only on a few metrics,
+especially accuracy, since it is simple and can be interpreted easily. However,
+concentrating solely on accuracy can be limiting to fully understanding model
+robustness—additional metrics can provide new data about performance and yield
+information about potential areas of improvement. In the absence of additional
+metrics, there exists a void about the utility of other defenses. To address these
+limitations, we implement particular metrics described in
+\textcite{guo2022comprehensive}
+and evaluate the performance of common adversarial training methods and evaluate a data
+augmentation scheme on model robustness.
+
+\noindent With our approach we seek to answer two main research questions:
+
+\begin{enumerate}
+    \setlength{\itemindent}{1cm}
+    \renewcommand{\labelenumi}{\textbf{RQ\arabic{enumi}.}}
+    \item How can the effectiveness of adversarial defenses be evaluated beyond
+    the accuracy metric?
+    \item How do data augmentation schemes impact the adversarial robustness of
+    a model?
+\end{enumerate}
+
+In our work, we contribute a testing framework evaluating adversarial
+training and data augmentation schemes on the basis of several metrics, firstly
+against a strong $\ell_\infty$ adversary, as well as corruption error, to understand
+the tradeoffs between defenses focused on adversarial robustness versus those
+focused on corruption robustness. We also show that data augmentation schemes alone
+do not improve adversarial robustness, but appropriately generating adversarial
+examples on augmented images improves model robustness to small perturbations
+and corruptions.
+
+\section{Related Work}
+
+% Terms defined here: FGSM, min-max problem, PGD, PGD-AT, PAT, \ell_\infty norm.
+% expected risk, empirical risk
+\textbf{Robustness of $\ell_p$ examples.}
+Adversarial training to improve model robustness was first explored in
+\textcite{goodfellow2015explaining}
+by training a model on the perturbed examples—i.e., inputs that have been
+slightly modified—generated by an adversary utilizing the \textit{fast gradient
+sign method} (FGSM) to improve model resilience against adversarial examples.
+The problem of adversarial training was subsequently formalized by
+\textcite{huang2016learningstrongadversary}
+as a min-max problem, defined roughly as
+\begin{equation}
+\min_\theta\mathbb E_{(x,y)\sim D}\Bigl[\max_{\delta\in S}\mathcal L
+(\theta, x+\delta, y)\Bigr]
+\end{equation}
+where $\theta$ denotes the parameters of the model, $(x, y)$ the inputs and
+labels drawn from a distribution $D$, $\delta$ the perturbation within the
+sphere $S$ around $x$ and $\mathcal L$ an appropriate loss function (e.g.,
+cross-entropy loss).
+
+\noindent The expected risk is defined as the average of the loss over the
+distribution $P$
+\begin{equation}
+R(f) = \int\mathcal L(f(x), y)dP(x, y)
+\end{equation}
+where $f(x)$ denotes the predicted label. Within neural network training, it
+is common to approximate the expected risk via the empirical risk, defined as:
+\begin{equation}
+R_{emp}(f) = \frac 1 n \sum_i^n \mathcal L(f(x_i), y_i)
+\end{equation}
+where $n$ is the number of samples in the training set. We refer the interested
+reader to \textcite{chapelle2000vicinal} for more details.
+
+\noindent
+To solve the inner maximization problem,
+\textcite{madry2018deeplearningmodelsresistant} introduced \textit{projected
+gradient descent} (PGD), an iterative version of FGSM, as a stronger adversary
+to both generate examples for training and to evaluate defenses against. They
+found that training with PGD alleviated the overfitting exhibited by models
+trained on FGSM examples. In addition, they also saw that model capacity was
+crucial to adversarial accuracy. An increase in capacity was shown to be related with an increase of adversarial accuracy. Their training technique is known as
+\textit{PGD-AT}.
+
+% Defined here: TRADES
+\noindent
+Subsequent papers on adversarial training have improved on the results achieved
+by \citeauthor{madry2018deeplearningmodelsresistant} by using different methods
+to improve either training speed or adversarial accuracy
+\cite{bai2021recent}. In our paper, we also evaluate another technique,
+\textit{TRADES} \cite{zhang2019trades}, which optimizes a regularized surrogate
+loss to minimize the empirical risk term. Furthermore, we also consider the
+adversarial resistance of \textit{AugMix} \cite{hendrycks2020augmix}, a method
+originally designed to increase corruption robustness via training on augmented
+inputs, and compare it to adversarial training methods whose threat model is
+robustness under small $\ell_\infty$ perturbations. For the remainder of this work we assume that all inputs can be represented as a vector (e.g., pixel values of an image can be rearranged as
+such) and thus the perturbations are bounded under the value of the
+$\ell_\infty$ norm
+\begin{equation}
+||x||_\infty = \max_i |x_i|
+\end{equation}
+where $x \in \mathbb R^n$, such that the change in any one color channel value
+cannot exceed a specified perturbation boundary $\varepsilon > 0$.
+We refer to \textcite{goodfellow2015explaining} for more details.
+
+\noindent\textbf{Adversarial training for corruption robustness.}
+Previous work by \textcite{kireev2022on} has shown that adversarial training
+with small $\varepsilon$ under $\ell_\infty$ (and other norms), smaller than
+typically used in adversarial training methods, improves classification accuracy
+on corrupted datasets. Compared to a clean model, however, this training
+performs either worse or approximately the same in clean accuracy, while falling
+behind in both clean and corrupted accuracy compared to data augmentation
+schemes such as AugMix. Other schemes such as \textit{AugMax}
+\cite{wang2021augmax} propose combining aspects of adversarial training and data
+augmentation to improve classifier accuracy. Inputs are first augmented using
+the same operations found in AugMix, but the mixing parameters are
+adversarially learned, and this results in better generality and robustness. In
+this paper, we propose to investigate the opposite—adversarial accuracy of
+augmentation techniques—with empirical metrics.
+
+\noindent
+Other schemes such as \textit{AugMax} \cite{wang2021augmax} propose combining
+aspects of adversarial training and data augmentation to improve classifier
+accuracy. Inputs are first augmented using the same operations found in
+\textit{AugMix}, but the mixing parameters are adversarially learned, and this
+results in better generality and robustness.
+
+\noindent\textbf{Robustness of image-to-image augmentations.}
+\textit{DeepAugment} \cite{hendrycks2021faces} uses image-to-image networks that
+randomly perturb inputs to generate augmented images that are trained in tandem
+with the original data to improve generalization. \textit{AdversarialAugment}
+(AdA) \cite{calian2022defendingimagecorruptionsadversarial} builds on this idea
+further, instead using the image-to-image networks to generate
+\textit{adversarial examples} using PGD. In addition, the semantic properties of
+adversarial examples are further preserved by bounding the structural similarity
+index measure (SSIM), a perception based metric, of generated perturbations.
+AdA can also be combined with other data augmentation techniques such as
+\textit{DeepAugment} or \textit{AugMix} to further improve corruption
+classification accuracy.
+
+\noindent\textbf{Robustness of data augmentation.}
+Data augmentation is a technique that involves applying transformations to model
+inputs to increase the diversity of training data and boost the network's
+ability to generalize.
+\textcite{wei2023empiricalriskminimizationlocal} show that while data
+augmentation methods such as \textit{mixup}, \textit{CutMix}, and \textit
+{AugMix} slightly improve or demonstrate no improvement upon a clean model
+trained on the raw data, their effects are also contingent on the combination of
+attacks and datasets used. All three perform demonstratively better on CIFAR-10
+\cite{krizhevsky2009learning}—a standardized dataset that contains thousands of
+images with ten different classes—under the CW and PGD attacks, but only
+\textit{AugMix} shows an improvement under \textit{AutoAttack} (AA).
+
+\begin{itemize}
+    \item\textit{mixup} \cite{zhang2018mixup} involves linearly interpolating
+    inputs and labels to smooth the decision boundary and provide a more stable
+    model.
+    \item\textit{CutMix} \cite{yun2019cutmix} patches images such that cutting
+    out a region in one image is replaced by another of the same area while
+    mixing labels according to how much of each image remains.
+    \item\textit{AugMix} \cite{hendrycks2020augmix} randomly combines image
+    transforms to generate diverse images while maintaining the semantics of
+    the original input.
+\end{itemize}
+
+\noindent
+The applicability of data augmentation as a means of improving adversarial
+training has also been studied in the past
+\cites{rice2020overfitting, gowal2021uncovering}. By transforming input data
+used to generate adversarial examples, the hope has been to improve the model's
+robustness beyond that of simply training on clean examples. Although initial
+results seemed unfavorable and without any substantial improvement, further work
+by \textcite{rebuffi2021dataaugmentation} has shown that combining data
+augmentation with techniques such as \textit{weight averaging} outperforms
+models only trained with one or the other.
+
+
+\section{Methods}
+
+To answer our research questions, we write a testing framework to evaluate
+several metrics and datasets against our chosen defenses. 
+
+We choose to evaluate on CIFAR-10 and CIFAR-100
+\cite{krizhevsky2009learning},
+datasets containing 60,000 $32 \times 32 \times 3$ color images each, 50,000 of
+which comprise the training set and the remaining 10000 the test set.
+CIFAR-10 groups images into 10 classes, the latter 100. To evaluate defenses'
+resistance to corruption, we use CIFAR-10-C and CIFAR-100-C
+\cite{hendrycks2019benchmarking},
+datasets that provide corrupted versions of the previous via 15 different
+augmentations at 5 severity levels, grouped into four categories: noise, blur,
+weather and digital. A more comprehensive description is given in
+\autoref{tab:dataset_desc}.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|l|c|c|c|c|}
+        \hline
+        \textbf{Dataset} & Training size & Test size & Severities & Corruptions \\
+        \hline
+        CIFAR-10 & 50,000 & 10,000 & N/A & N/A \\
+        CIFAR-100 & 50,000 & 10,000 & N/A & N/A \\
+        CIFAR-10-C & N/A & 10,000 & 5 & 15 \\
+        CIFAR-100-C & N/A & 10,000 & 5 & 15 \\
+        \hline
+    \end{tabular}
+    \caption{Breakdown of CIFAR-10, CIFAR-100, CIFAR-10-C, and CIFAR-100-C datasets.}
+    \label{tab:dataset_desc}
+\end{table}
+
+
+We consider our evaluation based on a clean model trained only on training data
+as well as three other defenses:
+PGD-AT \cite{madry2018deeplearningmodelsresistant},
+TRADES \cite{zhang2019trades}
+and AugMix \cite{hendrycks2020augmix}. We train using
+variations on ResNet \cite{he2016deepresidual}:
+a pre-activated variant \cite{he2016identity} (PreAct-ResNet18)
+and a wide variant \cite{zagoruyko2016wideresidualnetworks} (WRN-16-8).
+Following \citeauthor{he2016identity}, we choose an initial learning
+rate of 0.01 for the pre-activated network after finding that 0.1 converges too
+quickly and use a learning rate of 0.1 for the wide network. For all
+experiments, we optimize using stochastic gradient descent (SGD) with
+a Nesterov momentum of 0.9 and a weight decay of $5\times 10^{-4}$. The learning
+rate is adjusted according to a cosine annealing schedule
+\cite{loshchilov2017sgdr} with $T_{max} = 200$ and a minimum learning rate of
+$1 \times 10^{-5}$, updated once per epoch. Furthermore, use a batch size of
+$m = 128$. To evidence the capacity of our models, we note that PreActResNet18
+and WRN-16-8 trained on CIFAR-10 have approximately 11.2 and 11.0 million
+trainable parameters respectively.
+
+For PGD-AT, we used the hyperparameters suggested by
+\textcite{madry2018deeplearningmodelsresistant} and train for 200 epochs,
+performing 7 steps with a step size of 2 where the $\varepsilon = 8$ every epoch.
+Similarly for TRADES, we use the parameters specified for CIFAR-10
+\cite{zhang2019trades}.
+We train for 100 epochs, performing 10 iterations (denoted
+in the paper as $K = 10$), a step size of $\eta_1 = 0.007$, with an allowed
+perturbation of $\varepsilon = 0.031$, which is similar to the scaled
+$\varepsilon$ of PGD-AT. We train AugMix for 200 epochs and configure it to use
+the JSD loss and only perturbations not found in the corrupted datasets.
+
+We implement a strong iterative $\ell_\infty$ attack using the parameters 
+specified by \textcite{madry2018deeplearningmodelsresistant}
+with 20 steps, an allowed perturbation distance of $\varepsilon = 8$, and a
+step size of $2$, which is again similar to the evaluation performed by
+\citeauthor{zhang2019trades}. Using this attack, we perform our evaluation
+under criteria chosen among those listed in 
+\textcite{guo2022comprehensive}'s work to specifically evaluate the value of the
+defenses we use. Of these, we choose the \textit{clean accuracy} (CA), the
+\textit{adversarial accuracy} (AA), the \textit{average confidence of the
+adversarial class} (ACAC), the \textit{average confidence of the true class}
+(ACTC), the \textit{noise tolerance estimation} (NTE), the
+\textit{classification confidence} (CCV), and the
+\textit{classification output stability} (COS) for their ease of implementation.
+To measure models' resistance to data corruption, we test on the CIFAR-10-C and
+CIFAR-100-C datasets and
+measure the \textit{mean corruption error} (mCE),
+\begin{equation}
+mCE(f) = \frac 1 k \sum_{1 \leq s \leq 5} E_s f
+\end{equation}
+where $k = 15$ denotes the number of distinct data augmentations found in
+the corrupted datasets and $s$ is the severity level, where 1 is the least
+severe and 5 the most, on the classifier $f$. We neglect to evaluate metrics
+concerning neuron coverage (CV) since other work \cite{yang2022revisiting}
+has found that increasing neuron coverage is not associated with an increase
+with the above metrics.
+
+Finally, we implement the technique of combining AugMix with adversarial training
+proposed by \textcite{gowal2021uncovering}, generating adversarial examples on
+inputs augmented by AugMix using PGD. We train the model on these examples only
+with the cross-entropy loss. We refer to this defense as \textit{AugMixAT}.
+
+\noindent\textbf{Implementation details.}
+%We implement many of the
+
+TODO: work in progress
+
+We normalize our inputs with a mean of (0.5, 0.5, 0.5) and a standard deviation of
+[0.5, 0.5, 0.5). Adversarial example generation happens on unnormalized inputs and those outputs are then normalized to make results comparable.
+
+
+
+We performed our experiments on an 9\textsuperscript{th} generation Lenovo
+Thinkpad connected to an external RTX 2080 Ti. Our code is located at
+
+%\href{https://github.com/ryang-25/robust_eval}
+%{https://github.com/ryang-25/robust\_eval}.
+
+
+\section{Results}
+
+TODO: work in progress
+
+We present the results of our experiments in \autoref{tab:cifar10preact18}. % and other table if I have time
+All metrics, with the exception of COS, are normalized between 0 and 1 (or, 0 and 100\%, respectively.)
+
+We observe that TRADES, the defense with the highest adversarial accuracy, is
+is not as confident in its predictions, regardless of whether it misclassifies
+under an attack or correctly classifies a clean sample—a large amount of
+"uncertainty" exists in its predictions; when the model misclassifies, the
+second-highest prediction is much closer than that of any other defense.
+
+Furthermore, we also find that as a model becomes more robust to adversarial
+examples, its clean accuracy declines; defenses that are able to better balance
+this tradeoff between the two may be more appealing. Despite this large decrease
+in natural accuracy, we see that adversarial training schemes are only slightly
+affected in terms of corruption robustness—the mean corruption error between a
+clean classifier and an adversarially trained one varies up to $\approx 5\%$.
+
+
+% How long does it take to run the experiments?
+
+% We expect TRADES to have 85% nat accuracy and 56.61% robust accuracy. Did we get those numbers?
+
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|}
+        \hline
+        \diagbox{Method}{Defense} & Clean                  & PGD-AT                & TRADES                & AugMix                         & AugMixAT              \\
+        \hline\hline
+        CA                        & 0.9403                 & 0.8138                & 0.7765                & \textbf{0.9495}                & 0.8355                \\
+        AA                        & 0.0000                 & 0.3585                & \textbf{0.4429}       & 0.0000                         & 0.3803                \\
+        ACAC                      & 0.9999                 & 0.9451                & \textbf{0.4691}       & 0.9999                         & 0.8975                \\
+        ACTC                      & $7.96 \times 10^{-10}$ & 0.0408                & \textbf{0.1489}       & $4.11 \times 10^{-6} $         & 0.0613                \\
+        NTE                       & 0.9999                 & 0.5741                & \textbf{0.1361}       & 0.9999                         & 0.5047                \\
+        CCV                       & N/A                    & 0.0559                & 0.3358                & \textbf{0.0191}                & 0.0695                \\
+        COS                       & N/A                    & $2.92 \times 10^{-3}$ & $2.78 \times 10^{-2}$ & $\mathbf{7.67 \times 10^{-4}}$ & $8.88 \times 10^{-2}$ \\
+        mCE (CIFAR-10-C)          & 0.2634                 & 0.2781                & 0.3074                & \textbf{0.1173}                & 0.2362                \\
+        \hline
+    \end{tabular} 
+    \caption{Evaluation metrics (all absolute value) on the CIFAR-10 dataset with PreActResNet18.
+    Best values are presented in bold.}
+    \label{tab:cifar10preact18}
+\end{table}
+
+\begin{table}
+    \centering
+    \begin{tabular}{|c|c|c|c|c|}
+    \hline
+    \diagbox{Method}{Defense} & Clean & PGD-AT & TRADES & AugMix\\
+    \hline\hline
+    CA &.7458&&.4944&\\
+    AA &.0000&&.2188&\\
+    ACAC &.9999&&.2036&\\
+    ACTC &&&4.25&\\
+    NTE &&&7.94&\\
+    CCV \\
+    COS \\
+    mCE (CIFAR-100-C) &.5506&&.6082&\\
+    \hline
+    \end{tabular}
+    \caption{Evaluation metrics on the CIFAR-100 dataset with WRN-16-8.}
+    \label{tab:my_label}
+\end{table}
+
+
+\section{Discussion}
+
+TODO: work in progress
+
+%In this paper, we evaluate several sufficiently established methods for
+%improving deep model robustness against metrics designed to supplement
+
+\noindent\textbf{Model capacity.} We observe that in
+\textcite{madry2018deeplearningmodelsresistant}'s work, the models used are much
+more complex than ours (ResNet-34 and WRN-34-10 compared to PreActResNet18 and
+and WRN-16-8). As they find in their paper, large models are required for
+convergence in the adversarial training setting. However, we see in
+\textcite{zhang2019trades} that increasing model capacity—in the case of
+ResNet-18 to WRN-34-10, by roughly 4x—while maintaining the same regularization
+hyperparameter $\lambda = 1$ shows only modest improvement in terms of robust
+accuracy on the order of $\approx 5\%$ and a slight improvement in natural
+accuracy on the order of $\approx 1\%$ on CIFAR-10. The
+differences are smaller still on other datasets. Indeed,
+\textcite{huang2021exploringy} observe that increasing capacity alone by either
+increasing width or depth is insufficient to increase robustness; either the
+regularization should be increased or the model architecture changed.
+While we do not train with a complex model due to computational
+limitations, we note that metrics such as these can be useful in determining
+an optimal width/depth tradeoff for a defense.
+
+% In this paper, we implemented and demonstrated a sufficiently accepted method of improving corruption robustness, AugMix, and evaluated it according to our metrics showing a
+% % demonstrated TODO: fix with real results
+% impact to adversarial robustness as well, further work would serve to look at other defenses (NoisyMix \cite{erichson2024noisymix}, \verb|CARD|
+% \cite{diffenderfer2021winning}) to see if there is a general heuristic for those as well.
+
+
+% Why does it work the way it does?
+
+\section*{Acknowledgements}
+
+We would like to thank the duck school and the Fraunhofer IESE for supporting this work, especially x and y for their valuable feedback.
+
+\printbibliography
+
+\end{document} 

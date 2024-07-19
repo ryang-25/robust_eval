@@ -12,3 +12,5 @@ models/
 EVAL_RESULTS
 STATS
 TRAIN_RESULTS
+
+.DS_Store
