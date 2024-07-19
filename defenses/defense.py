@@ -22,7 +22,7 @@ class Defense(ABC):
         self.checkpoint_path = checkpoint_path
         self.normalize = normalize
         model = getattr(model, "_orig_mod", model)
-        self.is_ddp = hasattr(model, "model")
+        self.is_ddp = hasattr(model, "module")
         self.is_main = not self.is_ddp or self.device.id == 0
         match dataset:
             case "CIFAR-10" | "CIFAR-100":
@@ -32,12 +32,17 @@ class Defense(ABC):
             case "ImageNet":
                 self.scheduler = StepLR(self.optimizer, 30, 0.1)
 
+    def state_dict(self):
+        model = getattr(self.model, "_orig_mod", self.model) # unwrap the compile
+        model = self,module if is_ddp else model # unwrap ddp
+        return model.state_dict()
+
 
     def checkpoint(self):
         """
         Make a checkpoint so we don't lose our work.
         """
-        model = self.model.module.state_dict() if DDP else self.model.state_dict()
+        model = self.state_dict()
         state = {
             "model_state": model,
             "optimizer_state": self.optimizer.state_dict(),
