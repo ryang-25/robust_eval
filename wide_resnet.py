@@ -67,7 +67,7 @@ def WideResNet164():
     return WideResNet(16,4,10)
 
 def WideResNet168():
-    return WideResNet(16,8,10)
+    return WideResNet(16,8,100)
 
 def WideResNet2810():
     return WideResNet(28,10,100)

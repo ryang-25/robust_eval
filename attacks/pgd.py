@@ -32,12 +32,14 @@ class PGD(Attack):
             with torch.enable_grad():
                 output = self.model(self.normalize(xs)) # we need to calculate loss wrt normalized input
                 if self.odi:
-                    loss = (w*output).sum()
+                    loss = (w*output).sum() # pyright: ignore reportPossiblyUnboundVariable
                 else:
                     loss = F.cross_entropy(output, ys)
+                output = self.model(self.normalize(xs)) # we need to calculate loss wrt normalized input
+                loss = F.cross_entropy(output, ys)
             loss.backward()
             
-            xs = xs + self.step_size * xs.grad.sign()
+            xs = xs + self.step_size * xs.grad.sign() # pyright: ignore reportOptionalMemberAccess
             xs = xs.clamp(xs_nat - self.epsilon, xs_nat + self.epsilon)
             xs = xs.clamp(0., 1.)
         return xs

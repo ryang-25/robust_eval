@@ -51,7 +51,7 @@ class AugMixAT(Clean):
             self.optimizer.step()
             loss_ema = loss_ema * 0.9 + loss.detach() * 0.1
         self.scheduler.step() # we choose to adjust per epoch
-        return loss_ema
+        return loss_ema.item()
     
     def generate(self, train_loader, test_loader, start_epoch, epochs):
         best_acc = 0.

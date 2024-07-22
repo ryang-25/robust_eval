@@ -12,7 +12,6 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torchvision.transforms import v2
-from typing import Optional
 
 import os
 import sys
@@ -39,9 +38,11 @@ def load_train_set(set: str) -> DS.ImageFolder | DS.VisionDataset:
             return DS.ImageNet(MODELS_DIR, split="train", transform=transform)
         case "TinyImageNet":
             raise NotImplementedError
+        case _:
+            raise NotImplementedError
 
 
-def create_defense(method: Optional[str], model: Module, device: torch.device,
+def create_defense(method: str, model: Module, device: torch.device,
                    dataset: str, checkpoint_path, normalize) -> Defense:
     """
     creates a defense for the model
@@ -68,7 +69,7 @@ def main(device: torch.device, args: Namespace, world_size=1):
     # https://github.com/pytorch/pytorch/issues/125093
     # Only Linux supports GPU compile with Triton.
     if args.compile and sys.platform.startswith("linux"):
-        model = torch.compile(model, mode="reduce-overhead")
+        model.compile(mode="reduce-overhead")
         print("Model compile started.")
     if not os.path.exists(MODELS_DIR):
         os.makedirs(MODELS_DIR)

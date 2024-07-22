@@ -46,7 +46,7 @@ def create_model(model: str) -> Module:
     except Exception as e:
         sys.exit(f"Could not find model {model}!\n\nDiagnostics:\n{e}")
 
-def normalize(set: str) -> callable:
+def normalize(set: str) -> v2.Normalize:
     match set:
         case "CIFAR-10" | "CIFAR-100" | "CIFAR-10-C" | "CIFAR-10-P":
             return v2.Normalize([0.5] * 3, [0.5] * 3)

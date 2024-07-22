@@ -11,7 +11,7 @@ import torch
 import torch.nn.functional as F
 
 class Clean(Defense):
-    def train(self, train_loader: DataLoader):
+    def train(self, train_loader: DataLoader) -> float:
         self.model.train()
         device_type = self.device.type
         scaler = torch.GradScaler(device_type)
@@ -32,27 +32,30 @@ class Clean(Defense):
         self.scheduler.step()
         return loss_ema.item()
 
-    @torch.inference_mode
-    def test(self, test_loader: DataLoader):
+
+    @torch.inference_mode()
+    def test(self, test_loader: DataLoader) -> tuple[float, float]:
         self.model.eval()
         loss = torch.zeros(1, device=self.device)
         correct = torch.zeros(1, device=self.device)
         for images, labels in test_loader:
-            images, labels = images.to(self.device), labels.to(self.device)
+            images = images.to(self.device, non_blocking=True)
+            labels = labels.to(self.device, non_blocking=True)
             output = self.model(self.normalize(images))
             loss += F.cross_entropy(output, labels)
             pred = output.argmax(1)
             correct += (pred == labels).sum()
-        total_len = len(test_loader.dataset)
+        # assume the dataset implements __len__
+        total_len = len(test_loader.dataset) # pyright: ignore
         return loss.item() / total_len, correct.item() / total_len
 
     def generate(self, train_loader, test_loader, start_epoch, epochs):
         best_acc = 0.
-        best_weights = None
+        best_weights = {}
         for epoch in range(start_epoch, epochs):
             begin_time = time.time()
             if self.is_ddp:
-                train_loader.sampler.set_epoch(epoch)
+                train_loader.sampler.set_epoch(epoch) # pyright: ignore
             train_loss = self.train(train_loader)
             if self.is_main:
                 test_loss, test_acc = self.test(test_loader)

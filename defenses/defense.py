@@ -5,14 +5,14 @@ from torch.nn import Module
 from torch.optim import SGD
 from torch.optim.lr_scheduler import CosineAnnealingLR, StepLR
 from torch.utils.data import DataLoader
-from typing import Dict
+from typing import Callable, Dict
 
 import torch
 
 class Defense(ABC):
     def __init__(self, model: Module, device: device, dataset: str,
                  checkpoint_path: str,
-                 normalize: callable):
+                 normalize: Callable):
         """
         dataset: the name of the dataset.
         checkpoint_path: THe path where checkpoints are saved.
@@ -23,7 +23,7 @@ class Defense(ABC):
         self.normalize = normalize
         model = getattr(model, "_orig_mod", model)
         self.is_ddp = hasattr(model, "module")
-        self.is_main = not self.is_ddp or self.device.id == 0
+        self.is_main = not self.is_ddp or self.device.index == 0
         match dataset:
             case "CIFAR-10" | "CIFAR-100":
                 self.optimizer = SGD(model.parameters(), lr=0.01, momentum=0.9,
@@ -34,7 +34,7 @@ class Defense(ABC):
 
     def state_dict(self):
         model = getattr(self.model, "_orig_mod", self.model) # unwrap the compile
-        model = self,module if is_ddp else model # unwrap ddp
+        model = model.module if self.is_ddp else model # unwrap ddp
         return model.state_dict()
 
 
@@ -54,5 +54,5 @@ class Defense(ABC):
     @abstractmethod
     def generate(self, train_loader: DataLoader, test_loader: DataLoader,
                  start_epoch: int,
-                 epochs: int) -> tuple[Dict[str, any], float]:
+                 epochs: int) -> tuple[Dict[str, type], float]:
         raise NotImplementedError

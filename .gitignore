@@ -14,3 +14,11 @@ STATS
 TRAIN_RESULTS
 
 .DS_Store
+
+unet*
+resnet.py
+cw2.py
+ead.py
+apgd.py
+noisymix.py
+

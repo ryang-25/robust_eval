@@ -18,13 +18,14 @@ class TRADES(Clean):
 
     def train(self, train_loader):
         model = self.model
-        loss = 0
+        loss = torch.zeros(1, device=self.device)
         for images, labels in train_loader:
             self.optimizer.zero_grad()
             model.eval()
-            images, labels = images.to(self.device), labels.to(self.device)
+            images = images.to(self.device, non_blocking=True)
+            labels = labels.to(self.device, non_blocking=True)
             images_norm = self.normalize(images)
-            images_adv = images.detach() + 0.001 * torch.randn_like(images) # leaf
+            images_adv = images + 0.001 * torch.randn_like(images) # leaf
             for _ in range(self.steps):
                 images_adv = images_adv.detach().requires_grad_()
                 with torch.enable_grad():
@@ -32,9 +33,9 @@ class TRADES(Clean):
                     loss_kl = F.kl_div(F.log_softmax(output_adv, dim=1),
                                     F.softmax(output, dim=1), reduction="sum")
                 loss_kl.backward()
-                images_adv: torch.Tensor = images_adv + self.step_size * images_adv.grad.sign()
-                images_adv = images_adv.clamp(images-self.epsilon, images+self.epsilon).clamp(0., 1.)
-    
+                images_adv = images_adv + self.step_size * images_adv.grad.sign() # pyright: ignore
+                images_adv = images_adv.clamp(images-self.epsilon, images+self.epsilon).clamp(0., 1.)        
+
             model.train()
             self.optimizer.zero_grad()
             output = model(images_norm)
@@ -45,9 +46,9 @@ class TRADES(Clean):
             batch_loss = nat_loss + self.beta * robust_loss
             batch_loss.backward()
             self.optimizer.step()
-            loss += batch_loss
+            loss = loss.detach() + batch_loss
         self.scheduler.step()
-        return loss / len(train_loader)
+        return loss.item() / len(train_loader)
 
 
     def generate(self, train_loader, test_loader, start_epoch, epochs):

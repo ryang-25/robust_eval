@@ -13,7 +13,7 @@ class Attack(ABC):
         self.device = device
         self.normalize = normalize
 
-    def generate(self, xs: Tensor, ys: Tensor) -> Tensor:
+    def generate(self, xs: Tensor, ys: Tensor, /) -> Tensor:
         """
         Generate adversarial examples.
 
